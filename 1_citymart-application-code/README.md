@@ -36,22 +36,22 @@ Database Tier (Aurora MySQL / RDS MySQL in private subnets)
 
 ### 1\) Route 53 Hosted Zone
 
-Create or use a hosted zone for your domain (example):
+Create or use a hosted zone for our domain:
 
-* `citymart.example.com`
+* `citymart.samuelonyejekwe.com`
 
 Create a DNS record to point your domain to the **Public ALB**:
 
 * Record type: **A (Alias)** (and optionally AAAA)
-* Name: `citymart.example.com`
+* Name: `citymart.samuelonyejekwe.com`
 * Target: **Public ALB**
 
 ### 2\) ACM Certificate (TLS)
 
 Request an **ACM public certificate** for:
 
-* `citymart.example.com`
-* (optional) `www.citymart.example.com`
+* `citymart.samuelonyejekwe.com`
+* (optional) `www.citymart.samuelonyejekwe.com`
 
 Validate using **DNS validation in Route 53**.
 
@@ -66,7 +66,7 @@ Configure the Public ALB listeners:
 
 Open in browser:
 
-* `https://citymart.example.com`
+* `https://citymart.samuelonyejekwe.com`
 
 Expected:
 
@@ -132,9 +132,6 @@ citymart-frontend/
 &#x20;       ├── product-default.png
 
 &#x20;       └── placeholder-product.png
-
-
-
 
 
 
@@ -206,7 +203,6 @@ citymart-backend
 
 
 
-
 \---
 
 ## Frontend (Web Tier)
@@ -235,7 +231,7 @@ Recommended (best for HTTPS + custom domain):
 
 This ensures API calls work automatically via:
 
-* `https://<CUSTOM\\\\\\\\\\\\\\\_DOMAIN>/api/...`
+* `https://citymart.samuelonyejekwe.com/api/...`
 
 \---
 
@@ -267,7 +263,7 @@ The database stores:
 
 * `products` — catalog items
 * `customers` — customer contact info
-* `orders` and `order\\\\\\\\\\\\\\\_items` — submitted orders and line items
+* `orders` and `order_items` — submitted orders and line items
 
 Initialization scripts are in:
 
@@ -288,7 +284,7 @@ Files:
 Typical intent:
 
 * `/` → serve static frontend files
-* `/api/\\\\\\\\\\\\\\\*` → proxy to the **Internal ALB** (app tier)
+* `/api/*` → proxy to the **Internal ALB** (app tier)
 
 \---
 
@@ -300,10 +296,10 @@ Database configuration is in:
 
 Set these (typically via userdata / launch template environment variables):
 
-* `DB\\\\\\\\\\\\\\\_HOST`
-* `DB\\\\\\\\\\\\\\\_NAME`
-* `DB\\\\\\\\\\\\\\\_USER`
-* `DB\\\\\\\\\\\\\\\_PASS` (or `DB\\\\\\\\\\\\\\\_PASSWORD` depending on your implementation)
+* `DB_HOST`
+* `DB_NAME`
+* `DB_USER`
+* `DB_PASS` (or `DB_PASSWORD` depending on your implementation)
 
 \---
 
@@ -313,29 +309,29 @@ Set these (typically via userdata / launch template environment variables):
 
 Open:
 
-* `https://<CUSTOM\\\\\\\\\\\\\\\_DOMAIN>`
+* `https://citymart.samuelonyejekwe.com`
 
 ### 2\) Verify API via the same domain
 
 Run:
 
 ```bash
-curl -i https://<CUSTOM\\\\\\\\\\\\\\\_DOMAIN>/api/health
-curl -i https://<CUSTOM\\\\\\\\\\\\\\\_DOMAIN>/api/products
-curl -i "https://<CUSTOM\\\\\\\\\\\\\\\_DOMAIN>/api/product?id=1"
+curl -i https://citymart.samuelonyejekwe/api/health
+curl -i https://citymart.samuelonyejekwe/api/products
+curl -i "https://citymart.samuelonyejekwe/api/product?id=1"
 
 
 Create an order (example)
 
-curl -i -X POST https://<CUSTOM\\\\\\\\\\\\\\\_DOMAIN>/api/order \\\\\\\\\\\\\\\\
-  -H "Content-Type: application/json" \\\\\\\\\\\\\\\\
+curl -i -X POST https://<CUSTOM_DOMAIN>/api/order 
+  -H "Content-Type: application/json" 
   -d '{
-    "customer\\\\\\\\\\\\\\\_name": "Samuel",
-    "customer\\\\\\\\\\\\\\\_email": "samuel@example.com",
-    "customer\\\\\\\\\\\\\\\_phone": "+35700000000",
-    "items": \\\\\\\\\\\\\\\[
-      {"product\\\\\\\\\\\\\\\_id": 1, "qty": 2},
-      {"product\\\\\\\\\\\\\\\_id": 2, "qty": 1}
+    "customer_name": "Samuel",
+    "customer_email": "samuel@example.com",
+    "customer_phone": "+35700000000",
+    "items": [
+      {"product_id": 1, "qty": 2},
+      {"product_id": 2, "qty": 1}
     ]
   }'
 
