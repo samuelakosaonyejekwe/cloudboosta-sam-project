@@ -29,18 +29,6 @@ Our Tier Architecture
 
 IPv4 CIDR block is 10.0.0.0/16
 
-Tier	                Subnet Name	         CIDR Block	  Availability Zone	 Purpose / Hosted Resources
-Public Web Tier	        Public Web Subnet A	 10.0.0.0/20	  eu-west-2a	         Hosts Public Application Load Balancer and NAT Gateway
-Public Web Tier	        Public Web Subnet B	 10.0.16.0/20	  eu-west-2b	         Hosts Public Application Load Balancer and NAT Gateway
-Private Web Tier	Private Web Subnet A	 10.0.48.0/20	  eu-west-2a	         Hosts Frontend Web Servers (Nginx)
-Private Web Tier	Private Web Subnet B	 10.0.64.0/20	  eu-west-2b	         Hosts Frontend Web Servers (Nginx)
-Application Tier	Private App Subnet A	 10.0.96.0/20	  eu-west-2a	         Hosts Backend Application Servers (Apache + PHP)
-Application Tier	Private App Subnet B	 10.0.112.0/20	  eu-west-2b	         Hosts Backend Application Servers (Apache + PHP)
-Database Tier	        Private DB Subnet A	 10.0.144.0/20	  eu-west-2a	         Hosts Aurora MySQL / Amazon RDS database instance
-Database Tier	        Private DB Subnet B	 10.0.160.0/20	  eu-west-2b	         Hosts Aurora MySQL / Amazon RDS database instance
-
-\---
-
 Key Design Characteristics
 Design Principle	Implementation in the Architecture
 High Availability	All tiers deployed across two Availability Zones
