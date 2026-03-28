@@ -40,7 +40,7 @@ Create or use a hosted zone for our domain:
 
 * `citymart.samuelonyejekwe.com`
 
-Create a DNS record to point your domain to the **Public ALB**:
+Create a DNS record to point our domain to the **Public ALB**:
 
 * Record type: **A (Alias)** (and optionally AAAA)
 * Name: `citymart.samuelonyejekwe.com`
@@ -323,7 +323,7 @@ curl -i "https://citymart.samuelonyejekwe/api/product?id=1"
 
 Create an order (example)
 
-curl -i -X POST https://<CUSTOM_DOMAIN>/api/order 
+curl -i -X POST https://citymart.samuelonyejekwe.com/api/order 
   -H "Content-Type: application/json" 
   -d '{
     "customer_name": "Samuel",
