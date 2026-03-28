@@ -86,6 +86,7 @@ The application code is organized into a structured repository stored in an S3 b
 # Application Code Repository Structure for the CityMart Online Three-Tier Architecture
 
 The `citymart-frontend/` code directory contains:
+```
 citymart-frontend/
 │
 ├── index.html
@@ -113,10 +114,12 @@ citymart-frontend/
 ├── detergent.png
 ├── product-default.png
 └── placeholder-product.png
-
+```
 
 
 The `citymart-backend/` code directory contains:
+
+```
 citymart-backend
 │
 ├── apache
@@ -149,7 +152,7 @@ citymart-backend
 ├── Response.php
 └── Validator.php
 
-
+```
 
 \---
 
