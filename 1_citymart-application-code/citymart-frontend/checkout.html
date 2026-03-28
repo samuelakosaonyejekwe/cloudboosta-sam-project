@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CityMart Online | Checkout</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="./index.html">
+        <img src="assets/img/logo.png" class="logo" alt="CityMart" />
+        <span>CityMart Online</span>
+      </a>
+      <nav class="nav">
+        <a href="./products.html">Products</a>
+        <a class="active" href="./checkout.html">Checkout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h1>Checkout</h1>
+      <p class="muted">Review your cart and submit an order request for pickup.</p>
+
+      <div id="cart" class="card-inner"></div>
+
+      <h2>Customer details</h2>
+      <form id="orderForm" class="form">
+        <div class="row">
+          <div class="field">
+            <label>Name</label>
+            <input class="input" id="name" required placeholder="e.g., Samuel" />
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input class="input" id="email" type="email" required placeholder="e.g., samuel@citymart.samuelonyejekwe.com" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Phone</label>
+            <input class="input" id="phone" required placeholder="e.g., +357..." />
+          </div>
+          <div class="field">
+            <label>Pickup notes (optional)</label>
+            <input class="input" id="notes" placeholder="e.g., pickup at 5pm" />
+          </div>
+        </div>
+
+        <button class="btn" type="submit">Submit Order Request</button>
+        <p class="muted small" id="status"></p>
+      </form>
+    </section>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/checkout.js"></script>
+</body>
+</html>

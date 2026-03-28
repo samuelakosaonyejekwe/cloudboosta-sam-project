@@ -1,0 +1,811 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CityMart London FULL Production 
+
+Parameters:
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: Database password
+
+Resources:
+
+  # ================= VPC =================
+  CityMartVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: citymart-vpc
+
+  # ================= IGW =================
+  CityMartIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: citymart-igw
+
+  CityMartIGWAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref CityMartVPC
+      InternetGatewayId: !Ref CityMartIGW
+
+  # ================= SUBNETS =================
+  CityMartPublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CityMartVPC
+      CidrBlock: 10.0.0.0/20
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: citymart-public-subnet-a
+
+  CityMartPublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CityMartVPC
+      CidrBlock: 10.0.16.0/20
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: citymart-public-subnet-b
+
+  CityMartWebSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CityMartVPC
+      CidrBlock: 10.0.48.0/20
+      AvailabilityZone: eu-west-2a
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: citymart-web-a
+
+  CityMartWebSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CityMartVPC
+      CidrBlock: 10.0.64.0/20
+      AvailabilityZone: eu-west-2b
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: citymart-web-b
+
+  CityMartAppSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CityMartVPC
+      CidrBlock: 10.0.96.0/20
+      AvailabilityZone: eu-west-2a
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: citymart-app-a
+
+  CityMartAppSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CityMartVPC
+      CidrBlock: 10.0.112.0/20
+      AvailabilityZone: eu-west-2b
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: citymart-app-b
+
+  CityMartDBSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CityMartVPC
+      CidrBlock: 10.0.144.0/20
+      AvailabilityZone: eu-west-2a
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: citymart-db-a
+
+  CityMartDBSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CityMartVPC
+      CidrBlock: 10.0.160.0/20
+      AvailabilityZone: eu-west-2b
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: citymart-db-b
+
+  # ================= NAT =================
+  CityMartEIPA:
+    Type: AWS::EC2::EIP
+    DependsOn: CityMartIGWAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: citymart-eip-a
+
+  CityMartEIPB:
+    Type: AWS::EC2::EIP
+    DependsOn: CityMartIGWAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: citymart-eip-b
+
+  CityMartNatGatewayA:
+    Type: AWS::EC2::NatGateway
+    DependsOn:
+      - CityMartIGWAttachment
+      - CityMartEIPA
+    Properties:
+      AllocationId: !GetAtt CityMartEIPA.AllocationId
+      SubnetId: !Ref CityMartPublicSubnetA
+      Tags:
+        - Key: Name
+          Value: citymart-nat-a
+
+  CityMartNatGatewayB:
+    Type: AWS::EC2::NatGateway
+    DependsOn:
+      - CityMartIGWAttachment
+      - CityMartEIPB
+    Properties:
+      AllocationId: !GetAtt CityMartEIPB.AllocationId
+      SubnetId: !Ref CityMartPublicSubnetB
+      Tags:
+        - Key: Name
+          Value: citymart-nat-b
+
+  # ================= ROUTE TABLES =================
+  CityMartPublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CityMartVPC
+      Tags:
+        - Key: Name
+          Value: citymart-public-rt
+
+  CityMartWebRTA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CityMartVPC
+      Tags:
+        - Key: Name
+          Value: web-rt-a
+
+  CityMartWebRTB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CityMartVPC
+      Tags:
+        - Key: Name
+          Value: web-rt-b
+
+  CityMartAppRTA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CityMartVPC
+      Tags:
+        - Key: Name
+          Value: app-rt-a
+
+  CityMartAppRTB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CityMartVPC
+      Tags:
+        - Key: Name
+          Value: app-rt-b
+
+  CityMartDBRTA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CityMartVPC
+      Tags:
+        - Key: Name
+          Value: db-rt-a
+
+  CityMartDBRTB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CityMartVPC
+      Tags:
+        - Key: Name
+          Value: db-rt-b
+
+  # ================= ROUTES =================
+  CityMartPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: CityMartIGWAttachment
+    Properties:
+      RouteTableId: !Ref CityMartPublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref CityMartIGW
+
+  CityMartWebRouteA:
+    Type: AWS::EC2::Route
+    DependsOn: CityMartNatGatewayA
+    Properties:
+      RouteTableId: !Ref CityMartWebRTA
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref CityMartNatGatewayA
+
+  CityMartWebRouteB:
+    Type: AWS::EC2::Route
+    DependsOn: CityMartNatGatewayB
+    Properties:
+      RouteTableId: !Ref CityMartWebRTB
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref CityMartNatGatewayB
+
+  CityMartAppRouteA:
+    Type: AWS::EC2::Route
+    DependsOn: CityMartNatGatewayA
+    Properties:
+      RouteTableId: !Ref CityMartAppRTA
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref CityMartNatGatewayA
+
+  CityMartAppRouteB:
+    Type: AWS::EC2::Route
+    DependsOn: CityMartNatGatewayB
+    Properties:
+      RouteTableId: !Ref CityMartAppRTB
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref CityMartNatGatewayB
+
+  # ================= ASSOCIATIONS =================
+  AssocPublicA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CityMartPublicSubnetA
+      RouteTableId: !Ref CityMartPublicRT
+
+  AssocPublicB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CityMartPublicSubnetB
+      RouteTableId: !Ref CityMartPublicRT
+
+  AssocWebA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CityMartWebSubnetA
+      RouteTableId: !Ref CityMartWebRTA
+
+  AssocWebB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CityMartWebSubnetB
+      RouteTableId: !Ref CityMartWebRTB
+
+  AssocAppA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CityMartAppSubnetA
+      RouteTableId: !Ref CityMartAppRTA
+
+  AssocAppB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CityMartAppSubnetB
+      RouteTableId: !Ref CityMartAppRTB
+
+  AssocDBA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CityMartDBSubnetA
+      RouteTableId: !Ref CityMartDBRTA
+
+  AssocDBB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CityMartDBSubnetB
+      RouteTableId: !Ref CityMartDBRTB
+
+  # ================= SECURITY GROUPS =================
+  CityMartFrontendALBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: frontend-alb
+      VpcId: !Ref CityMartVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  CityMartWebSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: web
+      VpcId: !Ref CityMartVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref CityMartFrontendALBSG
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  CityMartBackendALBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: backend-alb
+      VpcId: !Ref CityMartVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref CityMartWebSG
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  CityMartAppSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: app
+      VpcId: !Ref CityMartVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref CityMartBackendALBSG
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  CityMartDBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: db
+      VpcId: !Ref CityMartVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref CityMartAppSG
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  # ================= FRONTEND ALB =================
+  CityMartFrontendALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: citymart-frontend-alb
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Subnets:
+        - !Ref CityMartPublicSubnetA
+        - !Ref CityMartPublicSubnetB
+      SecurityGroups:
+        - !Ref CityMartFrontendALBSG
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: true
+        - Key: access_logs.s3.bucket
+          Value: 3-tier-architecture-sam
+        - Key: access_logs.s3.prefix
+          Value: alb-logs
+        - Key: deletion_protection.enabled
+          Value: false
+
+  # ================= BACKEND ALB =================
+  CityMartBackendALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: citymart-backend-alb
+      Type: application
+      Scheme: internal
+      IpAddressType: ipv4
+      Subnets:
+        - !Ref CityMartAppSubnetA
+        - !Ref CityMartAppSubnetB
+      SecurityGroups:
+        - !Ref CityMartBackendALBSG
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: true
+        - Key: access_logs.s3.bucket
+          Value: 3-tier-architecture-sam
+        - Key: access_logs.s3.prefix
+          Value: alb-logs
+        - Key: deletion_protection.enabled
+          Value: false
+          
+  # ================= FRONTEND TARGET GROUP =================
+  CityMartFrontendTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      VpcId: !Ref CityMartVPC
+
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: traffic-port
+      HealthCheckPath: /index.html
+
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3          
+      UnhealthyThresholdCount: 5        
+
+      Matcher:
+        HttpCode: 200-399
+
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.type
+          Value: lb_cookie
+        - Key: stickiness.lb_cookie.duration_seconds
+          Value: 300
+
+        # important for ASG stability
+        - Key: deregistration_delay.timeout_seconds
+          Value: 30
+
+  # ================= BACKEND TARGET GROUP =================
+  CityMartBackendTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      VpcId: !Ref CityMartVPC
+
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: traffic-port
+      HealthCheckPath: /api/health.php
+
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3          
+      UnhealthyThresholdCount: 5        
+
+      Matcher:
+        HttpCode: 200-399
+
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 30
+
+  # ================= BACKEND LISTENER =================
+  CityMartBackendListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+      - CityMartBackendALB
+      - CityMartBackendTG
+    Properties:
+      LoadBalancerArn: !Ref CityMartBackendALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref CityMartBackendTG
+
+  # ================= FRONTEND LISTENER =================
+  CityMartFrontendListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+      - CityMartFrontendALB
+      - CityMartFrontendTG
+    Properties:
+      LoadBalancerArn: !Ref CityMartFrontendALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref CityMartFrontendTG
+
+  # ================= IAM =================
+  CityMartEC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+      Policies:
+        - PolicyName: citymart-s3-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: arn:aws:s3:::3-tier-architecture-sam
+
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - arn:aws:s3:::3-tier-architecture-sam/citymart-frontend/*
+                  - arn:aws:s3:::3-tier-architecture-sam/citymart-backend/*
+                  
+  # ================= INSTANCE PROFILE =================
+  CityMartInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      # REMOVED InstanceProfileName (auto-generated)
+      Roles:
+        - !Ref CityMartEC2Role
+
+  # ================= LAUNCH TEMPLATES =================
+  CityMartWebLT:
+    Type: AWS::EC2::LaunchTemplate
+    DependsOn: CityMartBackendALB
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
+        InstanceType: t3.micro
+        IamInstanceProfile:
+          Name: !Ref CityMartInstanceProfile
+        SecurityGroupIds:
+          - !Ref CityMartWebSG
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -xe
+
+            # DEBUG LOG
+            exec > /var/log/user-data.log 2>&1
+
+            yum clean all
+            yum update -y
+
+            until yum install -y nginx aws-cli; do
+              sleep 5
+            done
+
+            mkdir -p /var/www/html
+
+            until aws s3 sync s3://3-tier-architecture-sam/citymart-frontend /var/www/html; do
+              sleep 5
+            done
+
+            rm -f /etc/nginx/conf.d/default.conf
+
+            cat > /etc/nginx/conf.d/citymart.conf <<EOF
+            server {
+              listen 80;
+
+              location / {
+                root /var/www/html;
+                index index.html;
+              }
+
+              location /api/ {
+                proxy_pass http://${CityMartBackendALB.DNSName};
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto \$scheme;
+              }
+            }
+            EOF
+
+            nginx -t
+
+            sleep 60
+
+            systemctl enable nginx
+            systemctl restart nginx
+
+            chown -R nginx:nginx /var/www/html
+
+  CityMartAppLT:
+    Type: AWS::EC2::LaunchTemplate
+    DependsOn: CityMartDatabase
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
+        InstanceType: t3.micro
+        IamInstanceProfile:
+          Name: !Ref CityMartInstanceProfile
+        SecurityGroupIds:
+          - !Ref CityMartAppSG
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -xe
+
+            # DEBUG LOG
+            exec > /var/log/user-data.log 2>&1
+
+            yum clean all
+            yum update -y
+
+            until yum install -y httpd php php-mysqlnd mysql aws-cli; do
+              sleep 5
+            done
+
+            mkdir -p /var/www/html
+            mkdir -p /var/www/html/api
+
+            until aws s3 sync s3://3-tier-architecture-sam/citymart-backend /var/www/html; do
+              sleep 5
+            done
+
+            cat > /var/www/html/config.php <<EOF
+            <?php
+            define('DB_HOST', '${CityMartDatabase.Endpoint.Address}');
+            define('DB_NAME', 'citymart');
+            define('DB_PORT', '3306');
+            define('DB_USER', 'admin');
+            define('DB_PASS', '${DBPassword}');
+            ?>
+            EOF
+
+            echo "DirectoryIndex index.php index.html" >> /etc/httpd/conf/httpd.conf
+
+            systemctl enable httpd
+            systemctl start httpd
+
+            chown -R apache:apache /var/www/html
+
+  # ================= WEB ASG =================
+  CityMartWebASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn:
+      - CityMartFrontendTG
+      - CityMartFrontendALB
+      - CityMartWebLT
+    Properties:
+      VPCZoneIdentifier:
+        - !Ref CityMartWebSubnetA
+        - !Ref CityMartWebSubnetB
+
+      LaunchTemplate:
+        LaunchTemplateId: !Ref CityMartWebLT
+        Version: !GetAtt CityMartWebLT.LatestVersionNumber
+
+      TargetGroupARNs:
+        - !Ref CityMartFrontendTG
+
+      MinSize: 1
+      MaxSize: 4
+      DesiredCapacity: 2
+
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 300
+
+      # 🔥 ADD THIS (important for stability)
+      TerminationPolicies:
+        - OldestInstance
+
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT5M
+        WaitOnResourceSignals: false
+
+  # ================= APP ASG =================
+  CityMartAppASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn:
+      - CityMartBackendTG
+      - CityMartBackendALB
+      - CityMartAppLT
+      - CityMartDatabase
+    Properties:
+      VPCZoneIdentifier:
+        - !Ref CityMartAppSubnetA
+        - !Ref CityMartAppSubnetB
+
+      LaunchTemplate:
+        LaunchTemplateId: !Ref CityMartAppLT
+        Version: !GetAtt CityMartAppLT.LatestVersionNumber
+
+      TargetGroupARNs:
+        - !Ref CityMartBackendTG
+
+      MinSize: 1
+      MaxSize: 4
+      DesiredCapacity: 2
+
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 300   
+
+      # add for stability
+      TerminationPolicies:
+        - OldestInstance
+
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT5M             
+        WaitOnResourceSignals: false
+
+  # ================= RDS SUBNET GROUP =================
+  CityMartDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: citymart-db
+      SubnetIds:
+        - !Ref CityMartDBSubnetA
+        - !Ref CityMartDBSubnetB
+
+  # ================= DATABASE =================
+  CityMartDatabase:
+    Type: AWS::RDS::DBInstance
+    DependsOn: CityMartDBSubnetGroup
+
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+
+    Properties:
+      Engine: mysql
+      EngineVersion: "8.0"
+
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 20
+      StorageType: gp3
+
+      DBName: citymart
+
+      MasterUsername: admin
+      MasterUserPassword: !Ref DBPassword
+
+      DBSubnetGroupName: !Ref CityMartDBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref CityMartDBSG
+
+      PubliclyAccessible: false
+      MultiAZ: true
+      BackupRetentionPeriod: 7
+      DeletionProtection: true
+
+      PreferredBackupWindow: "02:00-03:00"
+      PreferredMaintenanceWindow: "sun:03:00-sun:04:00"
+
+  # ================= OUTPUTS =================
+Outputs:
+  FrontendALBDNS:
+    Description: Frontend ALB DNS
+    Value: !GetAtt CityMartFrontendALB.DNSName
+    Export:
+      Name: citymart-frontend-alb-dns
+
+  DBEndpoint:
+    Description: RDS Endpoint
+    Value: !GetAtt CityMartDatabase.Endpoint.Address

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CityMart Online | Products</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="./index.html">
+        <img src="assets/img/logo.png" class="logo" alt="CityMart" />
+        <span>CityMart Online</span>
+      </a>
+      <nav class="nav">
+        <a class="active" href="./products.html">Products</a>
+        <a href="./checkout.html">Checkout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="row row-space">
+        <h1>Products</h1>
+        <input id="search" class="input" placeholder="Search products..." />
+      </div>
+
+      <div id="status" class="muted small">Loading products…</div>
+      <div id="grid" class="grid"></div>
+    </section>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/products.js"></script>
+</body>
+</html>

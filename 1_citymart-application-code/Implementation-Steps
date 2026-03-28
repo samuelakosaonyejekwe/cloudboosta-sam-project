@@ -1,0 +1,238 @@
+# CityMart Online — Implementation Steps (3-Tier + Route 53 + ACM + HTTPS)
+
+## 1) Scope (What we are building)
+CityMart Online is a mini e-commerce product catalog where customers can:
+- Browse products
+- View product details
+- Submit an order request (no online payment in this lab)
+
+Architecture (3-tier):
+- Public ALB (internet-facing) → Web Tier (Nginx) → Internal ALB (private) → App Tier (Apache/PHP) → DB Tier (Aurora/RDS MySQL)
+
+Region/HA:
+- Region: eu-west-2 (London)
+- 2 AZs: eu-west-2a and eu-west-2b
+
+
+## 2) Prerequisites
+- VPC provisioned with:
+  - Public subnets (2) for Public ALB and NAT gateways
+  - Private web subnets (2) for Nginx web servers
+  - Private app subnets (2) for Apache/PHP backend servers
+  - Private DB subnets (2) for Aurora/RDS
+- Route tables configured:
+  - Public subnets → IGW route for 0.0.0.0/0
+  - Private subnets → NAT route for 0.0.0.0/0
+- Internet Gateway attached to VPC
+- NAT Gateway per AZ (recommended) in public subnets
+- Security groups configured:
+  - Public ALB SG: allow 80/443 from internet
+  - Web tier SG: allow from Public ALB SG
+  - Internal ALB SG: allow from Web tier SG
+  - App tier SG: allow from Internal ALB SG
+  - DB SG: allow 3306 from App tier SG
+
+
+## 3) Application Code Layout (this repository folder)
+The `citymart-frontend/` code directory contains:
+citymart-frontend/
+│
+├── index.html
+├── products.html
+├── product.html
+├── checkout.html
+├── order-success.html
+│
+└── assets/
+    ├── css/
+    │   └── styles.css
+    │
+    ├── js/
+    │   ├── config.js
+    │   ├── api.js
+    │   ├── products.js
+    │   ├── product.js
+    │   └── checkout.js
+    │
+    └── img/
+        ├── logo.png
+        ├── rice.png
+        ├── oil.png
+        ├── soap.png
+        ├── detergent.png
+        ├── product-default.png
+        └── placeholder-product.png
+
+
+
+The `citymart-backend/` code directory contains:
+citymart-backend
+│
+├── apache
+│   └── citymart.conf
+│
+├── api
+│   ├── health.php
+│   ├── order.php
+│   ├── product.php
+│   └── products.php
+│
+├── config
+│   ├── app.php
+│   └── database.php
+│
+├── public
+│   └── index.php
+│
+├── scripts
+│   ├── migrate.sql
+│   ├── seed.sql
+│   └── reset_db.sh
+│
+└── src
+    ├── CustomersService.php
+    ├── Database.php
+    ├── Db.php
+    ├── OrdersService.php
+    ├── ProductsService.php
+    ├── Response.php
+    └── Validator.php
+
+
+
+## 4) Database Setup (DB Tier)
+### 4.1 Create schema
+Run:
+- `backend/scripts/migrate.sql`
+
+Creates tables:
+- `products`
+- `customers`
+- `orders`
+- `order_items`
+
+### 4.2 Seed sample products
+Run:
+- `backend/scripts/seed.sql`
+
+Recommended execution method (from App server with mysql client installed):
+- `mysql -h <DB_ENDPOINT> -u <DB_USER> -p <DB_NAME> < migrate.sql`
+- `mysql -h <DB_ENDPOINT> -u <DB_USER> -p <DB_NAME> < seed.sql`
+
+Our DB_ENDPOINT: citymart-database.cdgowmasatge.eu-west-2.rds.amazonaws.com
+    DB_USER: admin
+    DB_NAME: citymart
+
+Alternative (lab helper):
+- `backend/scripts/reset_db.sh` (uses env vars DB_HOST/DB_USER/DB_PASS/DB_PORT)
+
+
+## 5) Backend Configuration (App Tier: Apache + PHP)
+### 5.1 DB connection settings
+Update:
+- `backend/config/database.php`
+
+Recommended:
+- Provide DB connection settings through environment variables:
+  - DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS
+
+### 5.2 Deploy backend code
+Deploy backend to Apache document root:
+- `/var/www/html/`
+
+Expected endpoints:
+- `GET  /api/health`
+- `GET  /api/products`
+- `GET  /api/product?id=1`
+- `POST /api/order`
+
+### 5.3 Validate backend locally (on backend server)
+- `curl -i http://localhost/api/health`
+- `curl -i http://localhost/api/products`
+
+
+## 6) Web Tier Configuration (Nginx)
+### 6.1 Deploy frontend
+Copy `frontend/` to Nginx web root:
+- `/usr/share/nginx/html/`
+
+### 6.2 Configure reverse proxy (/api) → Internal ALB
+Update:
+- `nginx/site-citymart.conf`
+
+Requirement:
+- Requests to `/api/` must proxy to the Internal ALB:
+  - `http://<INTERNAL_ALB_DNS>`
+
+### 6.3 Restart and enable Nginx
+- Restart Nginx and ensure it starts on boot.
+
+
+## 7) Load Balancers and Target Groups
+### 7.1 Public ALB (Internet-facing)
+- Subnets: 2 public subnets (across 2 AZs)
+- Listener:
+  - 80 (HTTP) — recommended: redirect to 443
+  - 443 (HTTPS) — uses ACM certificate
+- Target group: Web tier instances (Nginx) in private web subnets
+- Health check path: `/index.html` (or a dedicated static path)
+
+### 7.2 Internal ALB (Private)
+- Subnets: 2 private app subnets (across 2 AZs)
+- Listener:
+  - 80 (HTTP)
+- Target group: App tier instances (Apache/PHP) in private app subnets
+- Health check path: `/api/health`
+
+
+## 8) Route 53 + ACM + HTTPS (Custom Domain)
+Goal: customers access CityMart securely via:
+- `https://citymart.samuelonyejekwe.com`
+
+### 8.1 Create/Confirm a Route 53 Hosted Zone
+- Create a hosted zone for your domain (public hosted zone).
+- Ensure the domain registrar points to Route 53 name servers (if required).
+
+### 8.2 Request ACM Certificate (Public)
+- Request ACM certificate for:
+  - `<CUSTOM_DOMAIN>`citymart.samuelonyejekwe.com
+  - (optional) `www.citymart.samuelonyejekwe.com`
+- Validation method: DNS validation (Route 53 is easiest)
+
+### 8.3 Attach ACM Certificate to the Public ALB
+- Configure Public ALB listener 443 (HTTPS) and attach the ACM certificate.
+- Configure listener 80 (HTTP) to redirect to HTTPS 443 (recommended).
+
+### 8.4 Create Route 53 ALIAS record to Public ALB
+- Create an A/AAAA record (Alias) in the hosted zone:
+  - Name: `citymart.samuelonyejekwe.com`
+  - Target: Public ALB
+
+
+## 9) End-to-End Validation (Customer Flow)
+From a browser:
+1. Open: `https://citymart.samuelonyejekwe.com/`
+2. Products page: `https://citymart.samuelonyejekwe.com/products.html`
+3. Product details: `https://citymart.samuelonyejekwe.com/product.html?id=1`
+4. Checkout: `https://citymart.samuelonyejekwe.com/checkout.html` (submits to `/api/order`)
+5. Success: `https://citymart.samuelonyejekwe.com/order-success.html`
+
+API validation through the same domain:
+- `curl -i https://citymart.samuelonyejekwe.com/api/health`
+- `curl -i https://citymart.samuelonyejekwe.com`
+- `curl -i https://citymart.samuelonyejekwe.com`
+
+
+## 10) Smoke Tests (Recommended)
+Use `deploy/smoke-test.sh` from a machine that can access the public domain:
+- Check Home page returns HTTP 200
+- Check `/api/health` returns `ok:true`
+- Check `/api/products` returns JSON list
+
+
+## 11) Auto Scaling Notes (Lab-Friendly)
+If using ASGs:
+- Bake dependencies into AMIs OR use User Data scripts to:
+  - Pull application code: `citymart-backend` and `citymart-frontend` from S3 at instance launch
+  - Deploy configs + restart services automatically
+- Keep DB endpoint and secrets external (env vars / SSM) to avoid rebuilding AMIs for small changes.

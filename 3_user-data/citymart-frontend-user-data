@@ -1,0 +1,86 @@
+#!/bin/bash
+set -e
+
+echo "===== CityMart Frontend Initialization Started ====="
+
+LOGFILE=/var/log/citymart-frontend-userdata.log
+exec > >(tee -a $LOGFILE) 2>&1
+
+# --------------------------------------
+# System Update
+# --------------------------------------
+sudo dnf update -y
+
+# --------------------------------------
+# Install Required Packages
+# --------------------------------------
+sudo dnf install -y nginx git awscli unzip ca-certificates jq curl wget
+
+# Update certificate trust
+sudo update-ca-trust
+
+# --------------------------------------
+# Enable and Start Nginx
+# --------------------------------------
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+# --------------------------------------
+# Create Web Root Directory
+# --------------------------------------
+sudo mkdir -p /var/www/html
+
+# --------------------------------------
+# Download Frontend Application Code
+# --------------------------------------
+sudo aws s3 sync s3://3-tier-architecture-sam/citymart-frontend /var/www/html
+
+# Verify files downloaded
+ls -R /var/www/html
+
+# --------------------------------------
+# Set Correct Permissions
+# --------------------------------------
+sudo chown -R nginx:nginx /var/www/html
+sudo find /var/www/html -type d -exec chmod 755 {} \;
+sudo find /var/www/html -type f -exec chmod 644 {} \;
+
+# --------------------------------------
+# Validate Nginx Configuration
+# --------------------------------------
+sudo nginx -t
+
+# --------------------------------------
+# Restart Nginx
+# --------------------------------------
+sudo systemctl restart nginx
+
+# --------------------------------------
+# Wait Until Nginx Is Ready (Auto Scaling Reliability Fix)
+# --------------------------------------
+echo "Waiting for Nginx to become ready..."
+
+for i in {1..30}; do
+    if curl -s http://localhost >/dev/null; then
+        echo "Nginx is ready."
+        break
+    fi
+    echo "Waiting..."
+    sleep 2
+done
+
+# --------------------------------------
+# Health Checks
+# --------------------------------------
+
+echo "===== Nginx Service Status ====="
+sudo systemctl is-active nginx
+
+echo "===== Local HTTP Test ====="
+curl -I http://localhost
+
+echo "===== Backend API Test Through Proxy ====="
+curl -s http://localhost/api/health || true
+
+echo "===== Frontend Initialization Complete ====="
+

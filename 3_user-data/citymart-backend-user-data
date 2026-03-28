@@ -1,0 +1,131 @@
+#!/bin/bash
+set -e
+
+echo "===== CityMart Backend Initialization Started ====="
+
+LOGFILE=/var/log/citymart-backend-userdata.log
+exec > >(tee -a $LOGFILE) 2>&1
+
+# ----------------------------
+# System Update
+# ----------------------------
+sudo dnf update -y
+
+# ----------------------------
+# Install Required Packages
+# ----------------------------
+sudo dnf install -y \
+httpd \
+php \
+php-cli \
+php-common \
+php-mysqlnd \
+php-mbstring \
+php-xml \
+php-zip \
+mariadb105 \
+git \
+awscli \
+unzip \
+jq \
+curl \
+ca-certificates
+
+sudo update-ca-trust
+
+# ----------------------------
+# Start and Enable Apache
+# ----------------------------
+sudo systemctl enable httpd
+sudo systemctl start httpd
+
+# ----------------------------
+# Create Web Root
+# ----------------------------
+sudo mkdir -p /var/www/html
+
+# ----------------------------
+# Download Backend Code from S3
+# ----------------------------
+sudo aws s3 sync s3://3-tier-architecture-sam/citymart-backend /var/www/html
+
+# Verify files
+ls -R /var/www/html
+
+# ----------------------------
+# Apply Apache Configuration
+# ----------------------------
+sudo cp /var/www/html/apache/citymart.conf /etc/httpd/conf.d/citymart.conf
+
+# ----------------------------
+# Set Correct Permissions
+# ----------------------------
+sudo chown -R apache:apache /var/www/html
+sudo find /var/www/html -type d -exec chmod 755 {} \;
+sudo find /var/www/html -type f -exec chmod 644 {} \;
+
+# ----------------------------
+# Configure Database Connection
+# ----------------------------
+sudo tee /var/www/html/config/database.php > /dev/null <<DBEOF
+<?php
+return [
+  'host' => 'citymart-database.cdgowmasatge.eu-west-2.rds.amazonaws.com',
+  'port' => '3306',
+  'name' => 'citymart',
+  'user' => 'admin',
+  'pass' => 'phoenix80384citymart',
+  'charset' => 'utf8mb4',
+];
+DBEOF
+
+# ----------------------------
+# Create Database (if not exists)
+# ----------------------------
+mysql -h citymart-database.cdgowmasatge.eu-west-2.rds.amazonaws.com \
+-u admin \
+-pphoenix80384citymart \
+-e "CREATE DATABASE IF NOT EXISTS citymart;"
+
+# ----------------------------
+# Run Database Migrations
+# ----------------------------
+mysql -h citymart-database.cdgowmasatge.eu-west-2.rds.amazonaws.com \
+-u admin \
+-pphoenix80384citymart citymart \
+< /var/www/html/scripts/migrate.sql
+
+# ----------------------------
+# Seed Database
+# ----------------------------
+mysql -h citymart-database.cdgowmasatge.eu-west-2.rds.amazonaws.com \
+-u admin \
+-pphoenix80384citymart citymart \
+< /var/www/html/scripts/seed.sql
+
+# ----------------------------
+# Restart Apache
+# ----------------------------
+sudo systemctl restart httpd
+
+# ----------------------------
+# Health Checks
+# ----------------------------
+
+echo "===== Apache Check ====="
+sudo apachectl -t
+
+echo "===== API Health Check ====="
+curl -s http://localhost/api/health.php || true
+
+echo "===== Products API Test ====="
+curl -s http://localhost/api/products.php | head -n 200 || true
+
+echo "===== Database Connectivity Test ====="
+mysql -h citymart-database.cdgowmasatge.eu-west-2.rds.amazonaws.com \
+-u admin \
+-pphoenix80384citymart \
+-D citymart \
+-e "SHOW TABLES;"
+
+echo "===== Backend Initialization Complete ====="

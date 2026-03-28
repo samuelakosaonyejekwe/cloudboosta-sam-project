@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CityMart Online | Order Submitted</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="./index.html">
+        <img src="assets/img/logo.png" class="logo" alt="CityMart" />
+        <span>CityMart Online</span>
+      </a>
+      <nav class="nav">
+        <a href="./products.html">Products</a>
+        <a href="./checkout.html">Checkout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h1>Order request submitted ✅</h1>
+      <p class="muted">Thanks! We will confirm your pickup details shortly.</p>
+
+      <div class="card-inner">
+        <div class="muted small">Order Reference</div>
+        <div class="order-ref" id="ref">—</div>
+      </div>
+
+      <div class="actions">
+        <a class="btn" href="./products.html">Continue Shopping</a>
+        <a class="btn btn-secondary" href="./index.html">Home</a>
+      </div>
+
+      <p class="muted small">
+        If you didn't receive a reference, please try again.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById("ref").textContent = params.get("ref") || "—";
+  </script>
+</body>
+</html>

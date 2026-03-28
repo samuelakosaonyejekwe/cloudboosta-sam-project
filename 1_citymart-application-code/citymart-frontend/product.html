@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CityMart Online | Product</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="./index.html">
+        <img src="assets/img/logo.png" class="logo" alt="CityMart" />
+        <span>CityMart Online</span>
+      </a>
+      <nav class="nav">
+        <a href="./products.html">Products</a>
+        <a href="./checkout.html">Checkout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <a class="muted small" href="./products.html">← Back to products</a>
+      <div id="status" class="muted small">Loading product…</div>
+
+      <div id="product" class="product-detail hidden">
+        <div class="product-detail-left">
+          <img id="pimg" class="product-img-lg" src="assets/img/placeholder-product.png" alt="Product image" />
+        </div>
+        <div class="product-detail-right">
+          <h1 id="pname"></h1>
+          <div class="price" id="pprice"></div>
+          <p class="muted" id="pdesc"></p>
+
+          <div class="row">
+            <input id="qty" class="input input-sm" type="number" min="1" value="1" />
+            <button id="add" class="btn">Add to Cart</button>
+          </div>
+
+          <p class="muted small" id="msg"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/product.js"></script>
+</body>
+</html>

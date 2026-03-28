@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CityMart CloudFront + Route53
+
+Resources:
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+
+        Comment: ""
+        DefaultRootObject: "index.html"
+
+        Origins:
+        - Id: "alb-origin"
+          DomainName: !ImportValue citymart-frontend-alb-dns
+          CustomOriginConfig:
+            OriginProtocolPolicy: "http-only"
+            HTTPPort: 80
+            HTTPSPort: 443
+            OriginSSLProtocols:
+              - "TLSv1.2"
+
+        ViewerCertificate:
+          MinimumProtocolVersion: "TLSv1.2_2021"
+          SslSupportMethod: "sni-only"
+          CloudFrontDefaultCertificate: false
+          AcmCertificateArn: "arn:aws:acm:us-east-1:009850210027:certificate/a33e6e8b-59c3-4c46-8fe1-637fc9310190"
+
+        PriceClass: "PriceClass_All"
+
+        DefaultCacheBehavior:
+          TargetOriginId: "alb-origin"
+          ViewerProtocolPolicy: "redirect-to-https"
+          AllowedMethods:
+            - "GET"
+            - "HEAD"
+          CachedMethods:
+            - "GET"
+            - "HEAD"
+          Compress: true
+          CachePolicyId: "658327ea-f89d-4fab-a63d-7e88639e58f6"
+
+        Enabled: true
+
+        Aliases:
+          - "citymart.samuelonyejekwe.com"
+
+        IPV6Enabled: true
+
+        HttpVersion: "http2and3"
+
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: "none"
+
+  CityMartDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: Z01190442E8PKBMHM4KK6
+      Name: "citymart.samuelonyejekwe.com."
+      Type: "A"
+      AliasTarget:
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
